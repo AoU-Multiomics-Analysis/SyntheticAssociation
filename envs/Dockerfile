@@ -15,8 +15,8 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     conda-forge::r-devtools \
     conda-forge::r-remotes \
     conda-forge::r-arrow \
-    bioconda::bioconductor-genomicranges
-RUN R -e "remotes::install_github('kauralasoo/eQTLUtils@v20.04.1')"
+    bioconda::bioconductor-genomicranges=1.58.0
+RUN R -e "remotes::install_github('kauralasoo/eQTLUtils')"
 
 COPY scripts/*  . 
 ## Default command to run when the container starts
