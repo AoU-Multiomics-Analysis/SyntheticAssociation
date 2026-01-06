@@ -149,7 +149,7 @@ chrom <- variant_df %>% distinct(chrom) %>% pull(chrom)
 genotype_dat <- eQTLUtils::extractGenotypeMatrixFromDosage(chrom, 
                                            start_pos, 
                                            end_pos,
-                                           genotype_dosages
+                                           genotype_dosages_path
                                            ) %>% 
                     data.frame() %>% 
                     rownames_to_column('variant') %>% 
