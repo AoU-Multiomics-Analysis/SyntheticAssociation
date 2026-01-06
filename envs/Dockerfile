@@ -14,7 +14,8 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     conda-forge::r-magrittr \
     conda-forge::r-devtools \
     conda-forge::r-remotes \
-    conda-forge::r-arrow 
+    conda-forge::r-arrow \
+    bioconda::bioconductor-genomicranges
 RUN R -e "remotes::install_github('kauralasoo/eQTLUtils@v20.04.1')"
 
 COPY scripts/*  . 
