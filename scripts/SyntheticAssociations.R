@@ -248,7 +248,7 @@ run_conditional_analysis_pipeline <- function(gene_id,
     variant_sets <- compare_variant_sets(full_finemapped_data,thresholded_fm_data,gene_id)
     
     message('Extracting genotype dosages')
-    genotype_dosages_df <- extract_genotype_data_tabix(variant_sets,genotype_dosages)
+    genotype_dosages_df <- extract_genotype_data_tabix(variant_sets,genotype_dosages_path)
     
     message('Extracting molecular trait data')
     gene_vector <- parse_expression_data(expression_df,gene_id)  
