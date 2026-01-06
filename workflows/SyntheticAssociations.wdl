@@ -15,7 +15,7 @@ task ConditionalRegression {
     }
     
     command <<<
-    Rscript /SyntheticAssociations.R \
+    Rscript /tmp/SyntheticAssociations.R \
         --genotype_matrix ~{GenotypeMatrix} \
         --covariates ~{QTLCovariates} \
         --out_prefix ~{OutputPrefix} \
