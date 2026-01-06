@@ -25,7 +25,7 @@ task ConditionalRegression {
     >>>
     
     runtime {
-        docker: "ghcr.io/aou-multiomics-analysis/SyntheticAssociation:main"
+        docker: "ghcr.io/aou-multiomics-analysis/syntheticassociation:main"
         memory: "~{Memory}GB"
         disk: "local-disk 500 SSD"
         bootDiskSizeGb: 25
