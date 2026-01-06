@@ -312,4 +312,4 @@ ConditionalAnalysisRes <- GeneList %>%
             ))
 
 message('Writing results to output')
-ConditionalAnalysisRes %>% write_tsv(OutFile)
+ConditionalAnalysisRes %>% distinct() %>% write_tsv(OutFile)
