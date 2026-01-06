@@ -118,7 +118,7 @@ message('Running marginal regressions ')
 marginal_regression_results <- data.frame()
 for (x in (colnames(variant_genotype_data))) {
     subset_genotype_data <- variant_genotype_data %>% select(x)
-    subset_merged_data <- merge_genotype_covariate_data(expression_covars_df,subset_genotype_data)
+    subset_merged_data <- merge_genotype_covariate_data(expression_covars,subset_genotype_data)
     marginal_res <-  broom::tidy(lm(gene_vector[,1] ~ .,data = subset_merged_data )) %>% 
             filter(str_detect(term,'chr')) %>% 
             mutate(type = 'marginal')  
