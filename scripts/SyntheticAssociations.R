@@ -2,10 +2,25 @@ library(tidyverse)
 library(data.table)
 library(magrittr)
 
-
+###### PARSE COMMAND LINE ARGUMENTS ########## 
+option_list <- list(
+  # TODO look around if there is a package recognizing delimiter in dataset
+  optparse::make_option(c("--genotype_matrix"), type="character", default=NULL,
+    help="Genotype dosage matrix extracted from VCF", metavar="type"),
+  optparse::make_option(c("--covariates"), type="character", default=NULL,
+    help="Path to covariates file in QTLtools format", metavar="type"),
+  optparse::make_option(c("--out_prefix"), type="character", default="./finemapping_output",
+    help="Prefix of output files", metavar="type"),
+  optparse::make_option(c("--thresholded_finemapping"), type="character", default="./finemapping_output",
+    help="Path to parquet file for finemapping data that has been thresholded on allele frequency", metavar="type"),
+  optparse::make_option(c("--full_finemapping"), type="character", default="./finemapping_output",
+    help="Path to parquet file for finemapping data that has been run across all variants", metavar="type"),
+  optparse::make_option(c("--phenotype_bed"), type="character", default="./finemapping_output",
+    help="Path to bed file that contains the phenotype data", metavar="type")
+)
+opt <- optparse::parse_args(optparse::OptionParser(option_list=option_list))
 
 ########## FUNCTIONS ##############
-
 parse_genotype_data <- function(genotype_path) {
 genotype_dosages_df <- fread(basename(genotype_path)) %>% 
     mutate(variant = paste(CHROM,POS,REF,ALT,sep = '_')) %>% 
@@ -182,25 +197,58 @@ outlist
 
 
 
+#run_conditional_analysis_pipeline <- function(gene_id,
+                                              #full_finemapped_data,
+                                              #thresholded_fm_data,
+                                              #genotype_dosages_path,
+                                              #expression_df,
+                                              #covars_df,
+                                              #out_dir ='conditonal_analysis'
+                                              #) {
+    #system(paste0('mkdir -p ',out_dir))
+    #outfile_name <- paste0(gene_id,'_conditional_analysis.tsv')
+    #full_outfile <- paste0(out_dir,'/',outfile_name)
+    
+    #message('Extracting variant sets')
+    #variant_sets <- compare_variant_sets(full_finemapped_data,thresholded_fm_data,gene_id)
+    
+    #message('Extracting genotype dosages')
+    #variant_list_unique <- variant_sets %>% flatten() %>% unlist() %>% unique()
+    #genotype_dosages_df <- extract_genotype_data_tabix(variant_list_unique,genotype_dosages)
+    ##genotype_dosages_df <- extract_genotype_data_tabix(variant_sets,genotype_dosages)
+    
+    #message('Extracting molecular trait data')
+    #gene_vector <- parse_expression_data(expression_df,gene_id)  
+    
+    #message('Running conditional analysis')
+    #conditional_analysis <- variant_sets %>% 
+        #map_dfr(~run_conditional_regression(genotype_dosages_df,
+                                    #covars_df,
+                                    #gene_vector,
+                                    #unlist(.))) %>% 
+        #distinct() %>% 
+        #mutate(gene_id = gene_id)
+    
+    #conditional_analysis %>% write_tsv(full_outfile)
+    #conditional_analysis
+    #}
+
 run_conditional_analysis_pipeline <- function(gene_id,
                                               full_finemapped_data,
                                               thresholded_fm_data,
                                               genotype_dosages_path,
                                               expression_df,
                                               covars_df,
-                                              out_dir ='conditonal_analysis'
+                                              out_dir ='conditonal_analysis',
+                                              write_data = TRUE
                                               ) {
-    system(paste0('mkdir -p ',out_dir))
-    outfile_name <- paste0(gene_id,'_conditional_analysis.tsv')
-    full_outfile <- paste0(out_dir,'/',outfile_name)
+
     
     message('Extracting variant sets')
     variant_sets <- compare_variant_sets(full_finemapped_data,thresholded_fm_data,gene_id)
     
     message('Extracting genotype dosages')
-    variant_list_unique <- variant_sets %>% flatten() %>% unlist() %>% unique()
-    genotype_dosages_df <- extract_genotype_data_tabix(variant_list_unique,genotype_dosages)
-    #genotype_dosages_df <- extract_genotype_data_tabix(variant_sets,genotype_dosages)
+    genotype_dosages_df <- extract_genotype_data_tabix(variant_sets,genotype_dosages)
     
     message('Extracting molecular trait data')
     gene_vector <- parse_expression_data(expression_df,gene_id)  
@@ -213,16 +261,55 @@ run_conditional_analysis_pipeline <- function(gene_id,
                                     unlist(.))) %>% 
         distinct() %>% 
         mutate(gene_id = gene_id)
-    
+    if (write_data == TRUE) {
     conditional_analysis %>% write_tsv(full_outfile)
+    system(paste0('mkdir -p ',out_dir))
+    outfile_name <- paste0(gene_id,'_conditional_analysis.tsv')
+    full_outfile <- paste0(out_dir,'/',outfile_name)
+        }
     conditional_analysis
+        
     }
 
+########## PARSE ARGUMENTS  ###########
 
-########## LOAD DATA ###########
+GenotypeDosages <- opt$genotype_matrix 
+CovarsPath <- opt$covariates
+PhenotypeBed <- opt$phenotype_bed
+FullFinemapping <- opt$full_finemapping
+OutputPrefix <- opt$out_prefix
+ThresholdFinemapping <- opt$thresholded_finemapping
 
 
+OutFile <- paste0(OutputPrefix,'_conditional_analysis.tsv')
+########### LOAD DATA #########
 
+message('Loading threshold data')
+ThresholdData <- arrow::read_parquet(ThresholdFinemapping) %>%
+    mutate(variant = str_replace(variant,'chrchr','chr'))
+GeneList <- ThresholdData %>% distinct(molecular_trait_id) %>% dplyr::rename('gene_id'  = 1) 
+
+message('Loading covariates')
+CovarsDf <- parse_expression_covars(CovarsPath)
+
+message('Loading molecular data')
+PhenotypeBedDf <- fread(PhenotypeBed)
+
+message('Loading full finemapping')
+FullFinemapping <- fread(FullFinemapping)
 
 ######### RUN ANALYSIS #############
+ConditionalAnalysisRes <- GeneList %>% 
+    pull(gene_id) %>% 
+    map_dfr(~run_conditional_analysis_pipeline(
+                    .,
+                    FullFinemapping,
+                    ThresholdData,
+                    GenotypeDosages,
+                    PhenotypeBedDf,
+                    CovarsDf,
+                    write_data = FALSE
+            ))
 
+message('Writing results to output')
+ConditionalAnalysisRes %>% write_tsv(OutFile)
