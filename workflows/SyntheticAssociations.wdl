@@ -15,13 +15,17 @@ task ConditionalRegression {
     }
     
     command <<<
+    zcat ~{PhenotypeBed} | head -n 1 > header.txt
+    zcat ~{PhenotypeBed} | grep ~{OutputPrefix} > input_gene.txt
+    awk -F'\t' 'BEGIN{OFS="\t"} { $4="skip"; print }' input_gene.txt > skip.txt
+    cat header.txt input_gene.txt skip.txt > input_gene.bed 
     Rscript /tmp/SyntheticAssociations.R \
         --genotype_matrix ~{GenotypeMatrix} \
         --covariates ~{QTLCovariates} \
         --out_prefix ~{OutputPrefix} \
         --thresholded_finemapping ~{ThresholdFinemapping} \
         --full_finemapping  ~{FullFinemapping} \
-        --phenotype_bed ~{PhenotypeBed}
+        --phenotype_bed input_gene.bed 
     >>>
     
     runtime {
